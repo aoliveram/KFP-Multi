@@ -269,7 +269,7 @@ table(toa_original_without11[which(is.na(toa_from_fpt_without11))], useNA = "ifa
 ## O SEA QUE LOS TOA NO IDENTIFICADOS TIENEN VALORES ORIGINALES EN TODO EL ESPECTRO, DESDE 1 A 10.
 
 # Solo por si acaso, IDs originales de kfamily para estos casos
-ids_originales_para_na_reconstruido <- kfamily$id[indices_without_11[indices_na_en_reconstruido_subset]]
+#ids_originales_para_na_reconstruido <- kfamily$id[indices_without_11[indices_na_en_reconstruido_subset]]
 
 
 # ------------------------------------------------------------------------------
