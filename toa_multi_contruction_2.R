@@ -82,6 +82,11 @@ message(paste("Número de usuarias con TOA_pill:", sum(!is.na(TOA_pill))))
 print(table(TOA_other_moder_1, useNA = "ifany"))
 message(paste("Número de usuarias con TOA_other_moder_1:", sum(!is.na(TOA_other_moder_1))))
 
+
+hist(TOA_loop)
+hist(TOA_pill)
+hist(TOA_condom)
+
 # ------------------------------------------------------------------------------
 # Estrategia 2 (Loop - Pill - Condom - Others)
 # ------------------------------------------------------------------------------
@@ -176,3 +181,56 @@ message(paste("Número de usuarias con TOA_condom:", sum(!is.na(TOA_condom))))
 print(table(TOA_other_moder_2, useNA = "ifany"))
 message(paste("Número de usuarias con TOA_other_moder_2:", sum(!is.na(TOA_other_moder_2))))
 
+# ------------------------------------------------------------------------------
+# Plot
+# ------------------------------------------------------------------------------
+
+toa_list_strategy2 <- list(
+  Loop = TOA_loop,
+  Pill = TOA_pill,
+  Condom = TOA_condom,
+  Otros_Modernos_v2 = TOA_other_moder_2
+)
+
+# frecuencia máxima
+max_freq <- 0
+for (toa_vec in toa_list_strategy2) {
+  if (sum(!is.na(toa_vec)) > 0) { # Solo si hay datos no-NA
+    counts <- table(toa_vec)
+    if (length(counts) > 0 && max(counts) > max_freq) {
+      max_freq <- max(counts)
+    }
+  }
+}
+y_limit <- c(0, max_freq + max_freq * 0.05) # Añade un 5% de margen
+
+
+par(mfrow = c(2, 2), mar = c(4, 4, 3, 1)) # mar: bottom, left, top, right margins
+
+min_toa_val <- 1
+max_toa_val <- 10
+hist_breaks <- seq(min_toa_val - 0.5, max_toa_val + 0.5, by = 1)
+
+# Colores para los histogramas (opcional)
+hist_colors <- RColorBrewer::brewer.pal(n = 4, name = "Set2") # Necesita el paquete RColorBrewer
+
+for (i in 1:length(toa_list_strategy2)) {
+  method_name <- names(toa_list_strategy2)[i]
+  toa_data_for_hist <- toa_list_strategy2[[i]]
+  
+  hist(toa_data_for_hist,
+       main = paste("TOA ", gsub("_", " ", method_name)),
+       xlab = "Time step",
+       ylab = "Users",
+       ylim = y_limit,
+       breaks = hist_breaks, # Usar los mismos breaks para todos
+       col = hist_colors[i],
+       xaxt = 'n' # Suprimir el eje X por defecto
+  )
+  # Añadir un eje X personalizado con etiquetas en los centros de las barras (años 1 a 10)
+  axis(1, at = min_toa_val:max_toa_val, labels = min_toa_val:max_toa_val)
+  
+}
+
+# --- 4. Restaurar los parámetros gráficos originales (opcional) ---
+# par(mfrow = c(1, 1), mar = c(5.1, 4.1, 4.1, 2.1)) # Valores por defecto de R
