@@ -124,3 +124,17 @@ message(paste("En total suman:", num_from_fpt + num_from_cfp_relleno + num_asign
               paste0("(", round((num_from_fpt + num_from_cfp_relleno + num_asignados_como_11) / n_total_obs * 100, 2), "%)")))
 
 
+
+
+# Comparación final de TOA_derivado con toa_original
+# (Esto es solo para verificar qué tan bien replicamos el original)
+diff_final <- TOA_derivado - toa_original
+coincidencias_finales_exactas <- sum(diff_final == 0, na.rm = TRUE) # na.rm por si acaso, aunque no deberían quedar NAs
+porcentaje_final_exacto <- (coincidencias_finales_exactas / n_total_obs) * 100
+
+message(paste("\nComparación de TOA_derivado final con toa_original:"))
+message(paste("Número de coincidencias exactas:", coincidencias_finales_exactas, "de", n_total_obs,
+              paste0("(", round(porcentaje_final_exacto, 2), "%)")))
+message("Resumen de diferencias (TOA_derivado - toa_original):")
+print(summary(diff_final))
+print(table(diff_final, useNA="ifany"))
