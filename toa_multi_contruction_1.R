@@ -13,11 +13,13 @@ fpstatus_labels <- attr(kfamily, "label.table")$fpstatus
 num_periods <- 12
 n_obs <- nrow(kfamily)
 
-# Excluir categorías que claramente no son métodos de PF o son estados
-excluded_categories <- c("Pregnant", "NormalB", "Menopause",
-                         "Want more children", "Don't want more children but not practicing",
-                         "Infertile", "Still birth", "Newly wed", "Abortion",
-                         "Pessary", "Jelly", "Foam tablet", "Other", "0ther", NA) # Añadido NA por si acaso
+# métodos modernos
+modern_methods_names_in_fpstatus <- c("Loop", "Condom", "Oral Pill", "Vasectomy", "TL",
+                                      "Injection", "Rhythm", "Withdrawal")
+
+# nombres excluidos
+excluded_categories <- setdiff(names(fpstatus_labels), modern_methods_names_in_fpstatus)
+
 
 actual_method_labels <- character(0)      # Guardará las etiquetas de texto de los métodos
 actual_method_codes_numeric <- numeric(0) # Guardará los códigos numéricos de los métodos
@@ -57,13 +59,13 @@ for (period in 1:num_periods) {
   
   fpt_var_name <- paste0("fpt", period)
   
-  # Obtener los códigos de fpt para el periodo actual
+  # Obtener info de fpt para el periodo actual
   current_period_codes_in_data <- kfamily[[fpt_var_name]]
   
   # Contar la frecuencia de cada CÓDIGO de método relevante en el periodo actual
   for (j in 1:length(actual_method_codes_numeric_sorted)) {
-    method_code_to_count <- actual_method_codes_numeric_sorted[j]
-    method_label_for_matrix <- actual_method_labels_sorted[j]
+    method_code_to_count <- actual_method_codes_numeric_sorted[j] # identificamos código
+    method_label_for_matrix <- actual_method_labels_sorted[j]     # y nombre del método
     
     # Sumar cuántas veces aparece este código en los datos del periodo actual
     count_for_method <- sum(current_period_codes_in_data == method_code_to_count, na.rm = TRUE)
@@ -71,5 +73,23 @@ for (period in 1:num_periods) {
   }
 }
 
-
 prevalence_matrix
+
+# En PORCENTAJE de usuarias que reportan cada método en cada periodo
+prevalence_percentage_of_users <- prevalence_matrix
+for(period in 1:num_periods) {
+  fpt_var_name <- paste0("fpt", period)
+  if (!(fpt_var_name %in% names(kfamily))) next
+  
+  total_users_in_period <- sum(kfamily[[fpt_var_name]] %in% actual_method_codes_numeric_sorted, na.rm = TRUE)
+  if (total_users_in_period > 0) {
+    prevalence_percentage_of_users[, period] <- (prevalence_matrix[, period] / total_users_in_period) * 100
+  } else {
+    prevalence_percentage_of_users[, period] <- 0
+  }
+}
+print(round(prevalence_percentage_of_users, 1))
+
+# TOTAL de reportes por método
+total_reports_per_method <- rowSums(prevalence_matrix)
+sort(total_reports_per_method, decreasing = TRUE)
