@@ -1,6 +1,6 @@
+library(netdiffuseR)
 library(ggplot2)
 library(dplyr)  
-library(netdiffuseR)
 
 data(kfamily)       
 
@@ -111,13 +111,13 @@ prevalence_df_long$Periodo <- as.integer(prevalence_df_long$Periodo)
 plot_bar_counts <- ggplot(prevalence_df_long, aes(x = Periodo, y = Conteo, fill = Metodo)) +
   geom_bar(stat = "identity", position = "stack") +
   scale_x_continuous(breaks = 1:num_periods) +
-  labs(title = "Prevalencia de Métodos de PF por Periodo (Conteos)",
-       x = "Periodo Longitudinal (fptX)",
-       y = "Número de Usuarias") +
+  labs(title = "Prevalence of modern methods per period (fptX)",
+       x = "Period (fptX)",
+       y = "Users") +
   theme_minimal()
 print(plot_bar_counts)
 
-
+ggsave("preval-methos-per-period.pdf", plot = plot_bar_counts)
 
 # ------------------------------------------------------------------------------
 # 2) Prevalencia de CADA MÉTODO en cada periodo ( cfp )
