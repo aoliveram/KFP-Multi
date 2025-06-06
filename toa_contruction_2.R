@@ -416,8 +416,16 @@ toa_combinado <- ifelse(!is.na(toa_from_fpt), toa_from_fpt, toa_from_cfp) # Esta
 num_combinados_na <- sum(is.na(toa_combinado))
 num_combinados_validos <- sum(!is.na(toa_combinado))
 
-message(paste("\nAl combinar ambos métodos, se derivó un TOA para", num_combinados_validos, "individuos."))
-message(paste("Esto deja", num_combinados_na, "individuos sin un TOA derivado."))
+length(toa_combinado)-length(toa_without_11)
+
+# Tenemos 597 TOA combinados no NA
+message(paste("\nCombinando ambos métodos, tenemos TOA para", num_combinados_validos, "de un total de", length(toa_without_11), "individuos con TOA!=11"))
+message(paste("Es decir, un ", num_combinados_validos/length(toa_without_11) * 100, "% de los individuos tienen un TOA válido."))
+
+# Recuperamos el 92.74% de los TOA originales
+message(paste("Una vez sumamos todos los TOA=11, tenemos que hemos recuperado el ", 
+              (num_combinados_validos+ (length(toa_combinado)-length(toa_without_11)) )/length(toa_combinado) * 100, 
+              "de todos los TOA que están en netdiffuseR"))
 
 # 2) Análisis donde AMBOS métodos capturan un TOA 
 
