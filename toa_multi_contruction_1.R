@@ -118,3 +118,21 @@ plot_bar_counts <- ggplot(prevalence_df_long, aes(x = Periodo, y = Conteo, fill 
 print(plot_bar_counts)
 
 
+
+# ------------------------------------------------------------------------------
+# 2) Prevalencia de CADA MÉTODO en cada periodo ( cfp )
+# ------------------------------------------------------------------------------
+
+message("\n--- Prevalencia de Métodos según 'cfp' (Estado Actual Deck 5) ---")
+cfp_data_codes <- kfamily$cfp
+cfp_prevalence <- numeric(length(actual_method_labels_sorted))
+names(cfp_prevalence) <- actual_method_labels_sorted
+
+for (j in 1:length(actual_method_codes_numeric_sorted)) {
+  method_code_to_count <- actual_method_codes_numeric_sorted[j]
+  method_label_for_vector <- actual_method_labels_sorted[j]
+  
+  count_for_method_cfp <- sum(cfp_data_codes == method_code_to_count, na.rm = TRUE)
+  cfp_prevalence[method_label_for_vector] <- count_for_method_cfp
+}
+sort(cfp_prevalence, decreasing = TRUE)
