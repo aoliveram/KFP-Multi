@@ -36,14 +36,14 @@ fpstatus_labels <- attr(kfamily, "label.table")$fpstatus
 
 # Consideramos métodos contraceptivos "modernos":
 # Loop (03), Condom (04), Oral Pill (05), Vasectomy (06), Tubal Ligation (15), Injection (18)
-# Estos TAMBIÉN (extraño):
-# Rhythm (14) y Withdrawal (16).
+# Estos TAMBIÉN (extraño): Rhythm (14) y Withdrawal (16).
+
 # Además, excluimos estos:
-# Excluimos: Pregnant (01), Normal Birth (02), Menopause (07), Want more/No more (08,09), Infertile (10),
+# Pregnant (01), Normal Birth (02), Menopause (07), Want more/No more (08,09), Infertile (10),
 # Stillbirth (11), Newlywed (12), Abortion (13), Pessary (17), Jelly (19), Foam (20), Other (21)
 
-# Extraer los códigos numéricos correspondientes a los nombres de los métodos modernos
-modern_methods_names <- c("Loop", "Condom", "Oral Pill", "Vasectomy", "Tubal Ligation", "Injection", "Rhythm", "Withdrawal")
+# Extraer los códigos numéricos correspondientes a los nombres de los métodos modernos (TL == Tubal Ligation)
+modern_methods_names <- c("Loop", "Condom", "Oral Pill", "Vasectomy", "TL", "Injection", "Rhythm", "Withdrawal")
 modern_methods_codes <- as.numeric(fpstatus_labels[names(fpstatus_labels) %in% modern_methods_names])
 
 # ------------------------------------------------------------------------------
@@ -305,8 +305,8 @@ for (i in 1:n_obs) {
 min(toa_from_cfp, na.rm = TRUE)
 toa_from_cfp <- toa_from_cfp - 1963
 
-sum(!is.na(toa_from_cfp))  # 363 datos 
-sum(is.na(toa_from_cfp))   # 684 NA's
+sum(!is.na(toa_from_cfp))  # 368 datos 
+sum(is.na(toa_from_cfp))   # 679 NA's
 
 # Comparación y Correlación
 valid_indices_cfp <- !is.na(toa_from_cfp) # quitamos los NA de toa_from_fpt
@@ -371,8 +371,8 @@ for (j in 1:length(indices_without_11)) {
 
 toa_from_cfp_without11 <- toa_from_cfp_without11 - 1963
 
-sum(!is.na(toa_from_cfp_without11))  # 645 datos 
-sum(is.na(toa_from_cfp_without11))   # 399 NA's
+sum(!is.na(toa_from_cfp_without11))  # 646 datos 
+sum(is.na(toa_from_cfp_without11))   # 398 NA's
 
 table(toa_from_cfp, useNA = "ifany")
 table(toa_from_cfp_without11, useNA="ifany") 
@@ -397,19 +397,17 @@ has_toa_cfp <- !is.na(toa_from_cfp)
 # 1) solapamiento --
 n_obs <- length(toa_original)
 
-# a) Casos capturados por AMBOS métodos a la vez # 191
+# a) Casos capturados por AMBOS métodos a la vez # 193
 sum(has_toa_fpt & has_toa_cfp)
 
-# b) Casos capturados EXCLUSIVAMENTE por fptX.   # 231
+# b) Casos capturados EXCLUSIVAMENTE por fptX.   # 229
 sum(has_toa_fpt & !has_toa_cfp)
 
-# c) Casos capturados EXCLUSIVAMENTE por cfp.    # 172
+# c) Casos capturados EXCLUSIVAMENTE por cfp.    # 175
 sum(!has_toa_fpt & has_toa_cfp)
 
-
-# d) Casos NO capturados por NINGÚN método       # 453
+# d) Casos NO capturados por NINGÚN método       # 450
 sum(!has_toa_fpt & !has_toa_cfp)
-
 
 # Combinamos ambos métodos para un único TOA 
 
@@ -440,7 +438,7 @@ toa_original_misteriosos <- toa_original[indices_misteriosos]
 
 print(table(toa_original_misteriosos, useNA = "ifany"))
 
-# Solo tenemos 79 casos donde TOA != 11. --> un 7.5%.       ---> BKN
+# Solo tenemos 76 casos donde TOA != 11. --> un 7.25%.       ---> BKN !!
 length(toa_original_misteriosos[toa_original_misteriosos!=11])
 length(toa_original_misteriosos[toa_original_misteriosos!=11])/n_obs
 
@@ -459,6 +457,7 @@ toa_derivado_cfp_para_relleno_valid <- toa_derivado_cfp_para_relleno[valid_compa
 
 num_valid_relleno_comparisons <- length(toa_original_para_relleno_valid)
 
+# TOA originales consistemente más bajos (o iguales)
 diff_relleno <- toa_original_para_relleno_valid - toa_derivado_cfp_para_relleno_valid
 diff_relleno
 
