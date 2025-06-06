@@ -17,7 +17,7 @@ TOA_pill <- rep(NA, n_obs)
 TOA_other_moder_1 <- rep(NA, n_obs)
 
 # Definir el year_map (copiado de tu script anterior, verifica que es el correcto para byrtX)
-year_map_byrt <- c( "4"=1964, "5"=1965, "6"=1966, "7"=1967, "8"=1968,
+year_map <- c( "4"=1964, "5"=1965, "6"=1966, "7"=1967, "8"=1968,
                     "9"=1969, "0"=1970, "1"=1971, "2"=1972, "3"=1973 )
 
 
@@ -30,7 +30,7 @@ for (i in 1:n_obs) {
     current_fpt_status <- kfamily[i, fpt_var_name]
     current_byrt_char <- as.character(kfamily[i, byrt_var_name]) # Convertir a caracter para el mapeo
     
-    year_of_adoption_this_period <- year_map_byrt[current_byrt_char] - 1963 # Ajustar a escala 1-10
+    year_of_adoption_this_period <- year_map[current_byrt_char] - 1963 # Ajustar a escala 1-10
     
     # TOA para Loop
     if (is.na(TOA_loop[i]) && isTRUE(current_fpt_status == code_loop)) {
@@ -46,6 +46,29 @@ for (i in 1:n_obs) {
     if (is.na(TOA_other_moder_1[i]) && current_fpt_status %in% codes_other_moder_1) {
       TOA_other_moder_1[i] <- year_of_adoption_this_period
     }
+  }
+}
+
+# Bucle para RELLENAR usando cfp y cbyr 
+for (i in 1:n_obs) {
+  current_cfp_status <- kfamily$cfp[i]
+  current_cbyr_char <- as.character(kfamily$cbyr[i])
+  
+  year_of_adoption_cfp_period <- year_map[current_cbyr_char] - 1963 # Ajustar a escala 1-10
+  
+  # Relleno para TOA_loop
+  if (is.na(TOA_loop[i]) && isTRUE(current_cfp_status == code_loop)) {
+    TOA_loop[i] <- year_of_adoption_cfp_period
+  }
+  
+  # Relleno para TOA_pill
+  if (is.na(TOA_pill[i]) && isTRUE(current_cfp_status == code_pill)) {
+    TOA_pill[i] <- year_of_adoption_cfp_period
+  }
+  
+  # Relleno para TOA_other_moder_1
+  if (is.na(TOA_other_moder_1[i]) && current_cfp_status %in% codes_other_moder_1) {
+    TOA_other_moder_1[i] <- year_of_adoption_cfp_period
   }
 }
 
@@ -76,7 +99,7 @@ TOA_condom <- rep(NA, n_obs)
 TOA_other_moder_2 <- rep(NA, n_obs)
 
 # Definir el year_map (copiado de tu script anterior, verifica que es el correcto para byrtX)
-year_map_byrt <- c( "4"=1964, "5"=1965, "6"=1966, "7"=1967, "8"=1968,
+year_map <- c( "4"=1964, "5"=1965, "6"=1966, "7"=1967, "8"=1968,
                     "9"=1969, "0"=1970, "1"=1971, "2"=1972, "3"=1973 )
 
 
@@ -89,7 +112,7 @@ for (i in 1:n_obs) {
     current_fpt_status <- kfamily[i, fpt_var_name]
     current_byrt_char <- as.character(kfamily[i, byrt_var_name]) # Convertir a caracter para el mapeo
     
-    year_of_adoption_this_period <- year_map_byrt[current_byrt_char] - 1963 # Ajustar a escala 1-10
+    year_of_adoption_this_period <- year_map[current_byrt_char] - 1963 # Ajustar a escala 1-10
     
     # TOA para Loop
     if (is.na(TOA_loop[i]) && isTRUE(current_fpt_status == code_loop)) {
@@ -110,6 +133,33 @@ for (i in 1:n_obs) {
     if (is.na(TOA_other_moder_2[i]) && current_fpt_status %in% codes_other_moder_2) {
       TOA_other_moder_2[i] <- year_of_adoption_this_period
     }
+  }
+}
+# Bucle para RELLENAR usando cfp y cbyr 
+for (i in 1:n_obs) {
+  current_cfp_status <- kfamily$cfp[i]
+  current_cbyr_char <- as.character(kfamily$cbyr[i])
+  
+  year_of_adoption_cfp_period <- year_map[current_cbyr_char] - 1963 # Ajustar a escala 1-10
+  
+  # Relleno para TOA_loop
+  if (is.na(TOA_loop[i]) && isTRUE(current_cfp_status == code_loop)) {
+    TOA_loop[i] <- year_of_adoption_cfp_period
+  }
+  
+  # Relleno para TOA_pill
+  if (is.na(TOA_pill[i]) && isTRUE(current_cfp_status == code_pill)) {
+    TOA_pill[i] <- year_of_adoption_cfp_period
+  }
+  
+  # Relleno para TOA_condom
+  if (is.na(TOA_condom[i]) && isTRUE(current_cfp_status == code_condom)) {
+    TOA_condom[i] <- year_of_adoption_cfp_period
+  }
+  
+  # Relleno para TOA_other_moder_1
+  if (is.na(TOA_other_moder_1[i]) && current_cfp_status %in% codes_other_moder_1) {
+    TOA_other_moder_1[i] <- year_of_adoption_cfp_period
   }
 }
 

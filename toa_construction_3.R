@@ -7,6 +7,9 @@ data(kfamily)
 toa_original <- kfamily$toa
 toa_without_11 <- toa_original[toa_original != 11]
 
+modern_methods_names <- c("Loop", "Condom", "Oral Pill", "Vasectomy", "TL", "Injection", "Rhythm", "Withdrawal")
+modern_methods_codes <- as.numeric(fpstatus_labels[names(fpstatus_labels) %in% modern_methods_names])
+
 # TOA derivado de cfp/cbyr
 num_periods <- 12
 n_obs <- nrow(kfamily)
