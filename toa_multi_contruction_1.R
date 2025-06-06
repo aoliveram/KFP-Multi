@@ -46,3 +46,75 @@ actual_method_codes_numeric_sorted <- actual_method_codes_numeric[order_methods]
 
 message("Métodos de PF que se analizarán (corregido):")
 print(data.frame(Nombre = actual_method_labels_sorted, Codigo = actual_method_codes_numeric_sorted))
+
+# ------------------------------------------------------------------------------
+# 2) Prevalencia de CADA MÉTODO en cada periodo ( fptX )
+# ------------------------------------------------------------------------------
+
+# Matriz para guardar conteos:  filas = métodos,                      columnas = periodos
+prevalence_matrix <- matrix(0, nrow = length(actual_method_labels_sorted), ncol = num_periods,
+                            dimnames = list(actual_method_labels_sorted, paste0("Periodo_", 1:num_periods)))
+
+for (period in 1:num_periods) {
+  
+  fpt_var_name <- paste0("fpt", period)
+  
+  # Obtener info de fpt para el periodo actual
+  current_period_codes_in_data <- kfamily[[fpt_var_name]]
+  
+  # Contar la frecuencia de cada CÓDIGO de método relevante en el periodo actual
+  for (j in 1:length(actual_method_codes_numeric_sorted)) {
+    method_code_to_count <- actual_method_codes_numeric_sorted[j] # identificamos código
+    method_label_for_matrix <- actual_method_labels_sorted[j]     # y nombre del método
+    
+    # Sumar cuántas veces aparece este código en los datos del periodo actual
+    count_for_method <- sum(current_period_codes_in_data == method_code_to_count, na.rm = TRUE)
+    prevalence_matrix[method_label_for_matrix, period] <- count_for_method
+  }
+}
+
+prevalence_matrix
+
+# En PORCENTAJE de usuarias que reportan cada método en cada periodo
+prevalence_percentage_of_users <- prevalence_matrix
+for(period in 1:num_periods) {
+  fpt_var_name <- paste0("fpt", period)
+  if (!(fpt_var_name %in% names(kfamily))) next
+  
+  total_users_in_period <- sum(kfamily[[fpt_var_name]] %in% actual_method_codes_numeric_sorted, na.rm = TRUE)
+  if (total_users_in_period > 0) {
+    prevalence_percentage_of_users[, period] <- (prevalence_matrix[, period] / total_users_in_period) * 100
+  } else {
+    prevalence_percentage_of_users[, period] <- 0
+  }
+}
+print(round(prevalence_percentage_of_users, 1))
+
+# TOTAL de reportes por método
+total_reports_per_method <- rowSums(prevalence_matrix)
+sort(total_reports_per_method, decreasing = TRUE)
+
+# --- Visualización prevalencia por periodo ( fptX ) ---------------------------
+
+library(ggplot2)
+library(tidyr)
+
+prevalence_df_long <- as.data.frame(prevalence_matrix)
+prevalence_df_long$Metodo <- rownames(prevalence_df_long) # Ahora rownames son las etiquetas correctas
+prevalence_df_long <- pivot_longer(prevalence_df_long,
+                                   cols = starts_with("Periodo_"),
+                                   names_to = "Periodo",
+                                   values_to = "Conteo",
+                                   names_prefix = "Periodo_")
+prevalence_df_long$Periodo <- as.integer(prevalence_df_long$Periodo)
+
+plot_bar_counts <- ggplot(prevalence_df_long, aes(x = Periodo, y = Conteo, fill = Metodo)) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_x_continuous(breaks = 1:num_periods) +
+  labs(title = "Prevalencia de Métodos de PF por Periodo (Conteos)",
+       x = "Periodo Longitudinal (fptX)",
+       y = "Número de Usuarias") +
+  theme_minimal()
+print(plot_bar_counts)
+
+
