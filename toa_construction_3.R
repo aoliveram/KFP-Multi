@@ -7,6 +7,9 @@ data(kfamily)
 toa_original <- kfamily$toa
 toa_without_11 <- toa_original[toa_original != 11]
 
+# Obtener las etiquetas de los valores para fpstatus
+fpstatus_labels <- attr(kfamily, "label.table")$fpstatus
+
 modern_methods_names <- c("Loop", "Condom", "Oral Pill", "Vasectomy", "TL", "Injection", "Rhythm", "Withdrawal")
 modern_methods_codes <- as.numeric(fpstatus_labels[names(fpstatus_labels) %in% modern_methods_names])
 
@@ -56,6 +59,7 @@ for (i in 1:n_obs) {
 
 min(toa_from_fpt, na.rm = TRUE)
 toa_from_fpt <- toa_from_fpt - 1963
+valid_indices_fpt <- !is.na(toa_from_fpt)
 
 # TOA derivado de cfp/cbyr
 
@@ -80,6 +84,7 @@ for (i in 1:n_obs) {
 
 min(toa_from_cfp, na.rm = TRUE)
 toa_from_cfp <- toa_from_cfp - 1963
+valid_indices_cfp <- !is.na(toa_from_cfp)
 
 # --- Construcción del TOA_derivado final ---
 
@@ -126,12 +131,21 @@ message(paste("Número de TOAs asignados como '11' (no adoptadores restantes):",
 message(paste("En total suman:", num_from_fpt + num_from_cfp_relleno + num_asignados_como_11,
               paste0("(", round((num_from_fpt + num_from_cfp_relleno + num_asignados_como_11) / n_total_obs * 100, 2), "%)")))
 
+diff_fpt <- toa_original[valid_indices_fpt] - toa_from_fpt[valid_indices_fpt]
+print(summary(diff_fpt))
+table(diff_fpt)
+message(paste("Número de coincidencias exactas fpt:", sum(diff_fpt == 0, na.rm = TRUE), "de", sum(valid_indices_fpt)))
+sum(diff_fpt == 0, na.rm = TRUE)/num_from_fpt # Comparación final de TOA_derivado con toa_original
+
+diff_cfp <- toa_original[indices_cfp_relleno] - toa_from_cfp[indices_cfp_relleno]
+print(summary(diff_cfp))
+table(diff_cfp)
+message(paste("Número de coincidencias exactas cfp:", sum(diff_cfp == 0, na.rm = TRUE), "de", sum(valid_indices_cfp)))
+sum(diff_cfp == 0, na.rm = TRUE)/num_from_cfp_relleno # Comparación final de TOA_derivado con toa_original
 
 
-
-# Comparación final de TOA_derivado con toa_original
 # (Esto es solo para verificar qué tan bien replicamos el original)
-diff_final <- TOA_derivado - toa_original
+diff_final <- toa_original - TOA_derivado
 coincidencias_finales_exactas <- sum(diff_final == 0, na.rm = TRUE) # na.rm por si acaso, aunque no deberían quedar NAs
 porcentaje_final_exacto <- (coincidencias_finales_exactas / n_total_obs) * 100
 
