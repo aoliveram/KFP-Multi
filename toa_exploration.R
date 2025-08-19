@@ -4,14 +4,59 @@
 # actual_method_codes_numeric_sorted (con los códigos de métodos modernos que se analizan),
 # code_loop, code_pill (códigos numéricos específicos) ya existen.
 
-# correr parte 1 y 2 primero toa_construction.
 
-if (!exists("kfamily") || !exists("fpstatus_labels") || !exists("actual_method_codes_numeric_sorted") ||
-    !exists("code_loop") || !exists("code_pill") ) {
-  stop("Una o más variables necesarias no se encontraron. Asegúrate de haber ejecutado los bloques anteriores.")
+library(netdiffuseR)
+data(kfamily)   
+
+# ------------------------------------------------------------------------------
+# Construimos -- actual_method_codes_numeric_sorted -- code_loop -- code_pill
+# ------------------------------------------------------------------------------
+
+fpstatus_labels <- attr(kfamily, "label.table")$fpstatus
+
+num_periods <- 12
+n_obs <- nrow(kfamily)
+
+# métodos modernos
+modern_methods_names_in_fpstatus <- c("Loop", "Condom", "Oral Pill", "Vasectomy", "TL",
+                                      "Injection", "Rhythm", "Withdrawal")
+
+# nombres excluidos
+excluded_categories <- setdiff(names(fpstatus_labels), modern_methods_names_in_fpstatus)
+
+
+actual_method_labels <- character(0)      # Guardará las etiquetas de texto de los métodos
+actual_method_codes_numeric <- numeric(0) # Guardará los códigos numéricos de los métodos
+
+# Iteramos sobre los NOMBRES de fpstatus_labels
+for (method_label_text in names(fpstatus_labels)) {
+  
+  print(method_label_text)
+  
+  # Verificamos si esta etiqueta de texto NO está en excluidos y NO está ya en nuestra lista
+  if (!(method_label_text %in% excluded_categories) && !(method_label_text %in% actual_method_labels)) {
+    
+    actual_method_labels <- c(actual_method_labels, method_label_text) # etiqueta de texto
+    
+    actual_method_codes_numeric <- c(actual_method_codes_numeric, unname(fpstatus_labels[method_label_text])) # código numérico asociado. unname() obtiene solo el valor numérico
+  }
 }
 
-# --- 1. Inicializar contadores y estructuras de datos ---
+# Ordenar por nombre para consistencia (opcional pero bueno para visualización)
+order_methods <- order(actual_method_labels)
+actual_method_labels_sorted <- actual_method_labels[order_methods] ## -----------> WHY?
+actual_method_codes_numeric_sorted <- actual_method_codes_numeric[order_methods]
+
+# Códigos específicos para Loop y Oral Pill
+code_loop <- as.numeric(fpstatus_labels[['Loop']])
+code_pill <- as.numeric(fpstatus_labels[['Oral Pill']])
+
+# ------------------------------------------------------------------------------
+# TOA exploration
+# ------------------------------------------------------------------------------
+
+# --- 1. Inicializar variables y estructuras para el análisis de cambios ---
+
 n_obs <- nrow(kfamily)
 num_periods <- 12 # Para fpt1 a fpt12
 
@@ -107,8 +152,7 @@ individual_method_trajectory$last_modern_method_fpt  <- code_to_label_map[as.cha
 individual_method_trajectory$method_in_cfp         <- code_to_label_map[as.character(individual_method_trajectory$method_in_cfp_code)]
 
 
-# --- 3. Resumen de los Cambios ---
-message("\n--- Resumen de Cambios de Métodos Anticonceptivos (basado en fptX) ---")
+# Resumen de los Cambios de Metodos Anticonceptivos (basado en fptX)
 message(paste("Número total de individuos que cambiaron de un método moderno a otro moderno (en fpt1-fpt12):",
               sum(individual_method_trajectory$switched_modern_to_modern_fpt, na.rm = TRUE)))
 message(paste("Número de cambios específicos de 'Loop' a 'Oral Pill' (en fpt1-fpt12):",
@@ -117,7 +161,7 @@ message(paste("Número de llegadas a 'Loop' desde otro método moderno (en fpt1-
 message(paste("Número de llegadas a 'Oral Pill' desde otro método moderno (en fpt1-fpt12):", switches_to_pill_from_other_modern_fpt))
 
 
-# --- 4. Análisis de Cambios considerando `cfp` como estado final ---
+# --- 3. Análisis de Cambios considerando `cfp` como estado final ---
 # Comparamos el último método moderno en fptX con el método en cfp (si ambos son modernos)
 switches_fpt_to_cfp <- 0
 switches_fpt_loop_to_cfp_pill <- 0
@@ -135,7 +179,8 @@ for (i in 1:n_obs) {
     }
   }
 }
-message("\n--- Cambios del Último Método en fptX al Método en cfp ---")
+
+# Cambios del Último Método en fptX al Método en cfp ---
 message(paste("Número de individuos que cambiaron de su último método moderno en fptX a un método moderno diferente en cfp:", switches_fpt_to_cfp))
 message(paste("De estos, cambios de 'Loop' (en fptX) a 'Oral Pill' (en cfp):", switches_fpt_loop_to_cfp_pill))
 
@@ -180,5 +225,5 @@ if(length(transitions_list) > 0){
   message("No se registraron transiciones directas entre métodos modernos en la secuencia fptX.")
 }
 
-message("\nNota: Los 'actual_method_codes_numeric_sorted' usados para definir métodos modernos en este script son:")
+# Nota: Los 'actual_method_codes_numeric_sorted' usados para definir métodos modernos en este script son:"
 print(data.frame(Nombre = actual_method_labels_sorted, Codigo = actual_method_codes_numeric_sorted))
