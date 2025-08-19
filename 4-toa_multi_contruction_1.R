@@ -1,4 +1,4 @@
-# --- GENERACIÓN DE TOA ESPECÍFICOS POR MÉTODO (Estrategia 1) ---
+# Calcula TOA para cada método específico
 
 # kfamily, fpstatus_labels, num_periods, n_obs, year_map,
 # y actual_method_codes_numeric_sorted ya existen. (correr parte 1)

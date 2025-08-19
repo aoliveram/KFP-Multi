@@ -1,4 +1,4 @@
-# --- ANÁLISIS DE CAMBIOS DE MÉTODO ANTICONCEPTIVO ---
+# Calcula matriz de transición de métodos anticonceptivos
 
 # Asumiendo que kfamily, fpstatus_labels, num_periods, n_obs,
 # actual_method_codes_numeric_sorted (con los códigos de métodos modernos que se analizan),

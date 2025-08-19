@@ -1,3 +1,5 @@
+# Calcula Prevalencia de cáda método en cada periodo.
+
 library(netdiffuseR)
 library(ggplot2)
 library(dplyr)  
@@ -140,8 +142,12 @@ sort(cfp_prevalence, decreasing = TRUE)
 # ----------------------------------------------------------------------------
 # 3.1) Prevalencia cfp + cbyr TOTAL
 # ----------------------------------------------------------------------------
-# En lugar de replicar la distribución de cfp en todas las columnas, usamos cbyr
-# para ubicar a cada observación en su periodo correspondiente.
+
+# Número de individuos con método moderno en cfp
+is_cfp_modern <- kfamily$cfp %in% actual_method_codes_numeric_sorted
+num_true <- sum(is_cfp_modern)   # cantidad de TRUE
+num_false <- sum(!is_cfp_modern) # cantidad de FALSE
+cat("TRUE:", num_true, "\nFALSE:", num_false, "\n")
 
 # Mapa de cbyr -> año calendario (mismo que BYRtx)
 year_map_cfp <- c(
@@ -211,7 +217,7 @@ plot_bar_cfp <- ggplot(prevalence_cfp_df_long, aes(x = Periodo, y = Conteo, fill
   scale_x_continuous(breaks = 1:num_periods) +
   labs(title = "Prevalence of modern methods per period (cfp + cbyr) TOTAL",
        subtitle = "Cada observación se ubica en el periodo según cbyr",
-       x = "Period (1..12)",
+       x = "Period",
        y = "Users") +
   theme_minimal()
 print(plot_bar_cfp)

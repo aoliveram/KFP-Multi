@@ -1,3 +1,5 @@
+# Calcula el TOA derivado de los datos de KFP, priorizando fptX/byrtX y luego cfp/cbyr.
+
 # --- RESUMEN FINAL Y CONSTRUCCIÓN DE TOA_DERIVADO ---
 
 library(netdiffuseR)
