@@ -120,8 +120,6 @@ num_asignados_como_11 <- length(indices_11_original)
 
 
 # --- Resumen de la Composición de TOA_derivado ---
-message("\n--- Composición de TOA_derivado Final ---")
-message(paste("Total de observaciones:", n_total_obs))
 message(paste("Número de TOAs derivados de fptX/byrtX:", num_from_fpt,
               paste0("(", round(num_from_fpt / n_total_obs * 100, 2), "%)")))
 message(paste("Número de TOAs derivados (como relleno) de cfp/cbyr:", num_from_cfp_relleno,
@@ -134,22 +132,20 @@ message(paste("En total suman:", num_from_fpt + num_from_cfp_relleno + num_asign
 diff_fpt <- toa_original[valid_indices_fpt] - toa_from_fpt[valid_indices_fpt]
 print(summary(diff_fpt))
 table(diff_fpt)
-message(paste("Número de coincidencias exactas fpt:", sum(diff_fpt == 0, na.rm = TRUE), "de", sum(valid_indices_fpt)))
-sum(diff_fpt == 0, na.rm = TRUE)/num_from_fpt # Comparación final de TOA_derivado con toa_original
+message(paste("Número de coincidencias exactas fpt:", sum(diff_fpt == 0, na.rm = TRUE), "de", sum(valid_indices_fpt)),
+paste(". Porcentaje de coincidencias exactas fpt:", round(sum(diff_fpt == 0, na.rm = TRUE) / num_from_fpt * 100, 2), "%"))
 
 diff_cfp <- toa_original[indices_cfp_relleno] - toa_from_cfp[indices_cfp_relleno]
 print(summary(diff_cfp))
 table(diff_cfp)
-message(paste("Número de coincidencias exactas cfp:", sum(diff_cfp == 0, na.rm = TRUE), "de", sum(valid_indices_cfp)))
-sum(diff_cfp == 0, na.rm = TRUE)/num_from_cfp_relleno # Comparación final de TOA_derivado con toa_original
-
+message(paste("Número de coincidencias exactas cfp:", sum(diff_cfp == 0, na.rm = TRUE), "de", sum(valid_indices_cfp)),
+paste(". Porcentaje de coincidencias exactas cfp:", round(sum(diff_cfp == 0, na.rm = TRUE) / num_from_cfp_relleno * 100, 2), "%"))
 
 # (Esto es solo para verificar qué tan bien replicamos el original)
 diff_final <- toa_original - TOA_derivado
 coincidencias_finales_exactas <- sum(diff_final == 0, na.rm = TRUE) # na.rm por si acaso, aunque no deberían quedar NAs
 porcentaje_final_exacto <- (coincidencias_finales_exactas / n_total_obs) * 100
 
-message(paste("\nComparación de TOA_derivado final con toa_original:"))
 message(paste("Número de coincidencias exactas:", coincidencias_finales_exactas, "de", n_total_obs,
               paste0("(", round(porcentaje_final_exacto, 2), "%)")))
 message("Resumen de diferencias (TOA_derivado - toa_original):")
