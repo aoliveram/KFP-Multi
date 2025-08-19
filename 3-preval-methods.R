@@ -45,8 +45,6 @@ order_methods <- order(actual_method_labels)
 actual_method_labels_sorted <- actual_method_labels[order_methods] ## -----------> WHY?
 actual_method_codes_numeric_sorted <- actual_method_codes_numeric[order_methods]
 
-
-message("Métodos de PF que se analizarán (corregido):")
 print(data.frame(Nombre = actual_method_labels_sorted, Codigo = actual_method_codes_numeric_sorted))
 
 # ------------------------------------------------------------------------------
@@ -119,7 +117,7 @@ plot_bar_counts <- ggplot(prevalence_df_long, aes(x = Periodo, y = Conteo, fill 
   theme_minimal()
 print(plot_bar_counts)
 
-ggsave("preval-methos-per-period.pdf", plot = plot_bar_counts)
+ggsave("preval-methods-1-fpt-byrt.pdf", plot = plot_bar_counts)
 
 # ------------------------------------------------------------------------------
 # 3) Prevalencia de CADA MÉTODO en cada periodo ( cfp )
@@ -222,7 +220,7 @@ plot_bar_cfp <- ggplot(prevalence_cfp_df_long, aes(x = Periodo, y = Conteo, fill
   theme_minimal()
 print(plot_bar_cfp)
 
-ggsave("preval-methods-cfp-cbyr.pdf", plot = plot_bar_cfp, width = 9, height = 6)
+ggsave("preval-methods-2-cfp-cbyr-total.pdf", plot = plot_bar_cfp, width = 9, height = 6)
 
 # ----------------------------------------------------------------------------
 # 3.2) Prevalencia cfp + cbyr (para quienes NUNCA reportaron moderno en fptX)
@@ -286,7 +284,7 @@ plot_bar_cfp_only <- ggplot(prevalence_cfp_only_df_long, aes(x = Periodo, y = Co
   theme_minimal()
 print(plot_bar_cfp_only)
 
-ggsave("preval-methods-cfp-complement-only.pdf", plot = plot_bar_cfp_only, width = 9, height = 6)
+ggsave("preval-methods-3-cfp-cbyr-complement-only.pdf", plot = plot_bar_cfp_only, width = 9, height = 6)
 
 # Matriz total = fptX + complemento cfp (solo nunca-modernos en fptX, por periodo)
 prevalence_matrix_tot <- prevalence_matrix + cfp_only_matrix
@@ -315,7 +313,7 @@ plot_bar_total <- ggplot(prevalence_tot_df_long, aes(x = Periodo, y = Conteo, fi
   theme_minimal()
 print(plot_bar_total)
 
-ggsave("preval-methods-total.pdf", plot = plot_bar_total, width = 9, height = 6)
+ggsave("preval-methods-4-final.pdf", plot = plot_bar_total, width = 9, height = 6)
 
 
 # --- Gráfico comparativo: fptX vs cfp-only vs Total -------------
@@ -343,4 +341,4 @@ plot_bar_compare <- ggplot(prevalence_compare_long, aes(x = Periodo, y = Conteo,
   facet_wrap(~ Scenario, ncol = 1)
 print(plot_bar_compare)
 
-ggsave("preval-methods-compare.pdf", plot = plot_bar_compare, width = 10, height = 12)
+ggsave("preval-methods-5-compare.pdf", plot = plot_bar_compare, width = 10, height = 12)
