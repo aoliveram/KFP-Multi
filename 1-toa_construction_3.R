@@ -153,3 +153,17 @@ message(paste("Número de coincidencias exactas:", coincidencias_finales_exactas
 message("Resumen de diferencias (TOA_derivado - toa_original):")
 print(summary(diff_final))
 print(table(diff_final, useNA="ifany"))
+
+# ------------------------- Guardamos TOA_derivado ------------------------------------------
+
+# Construir objeto con TOA_derivado y su origen
+TOA_derivado_full <- data.frame(
+  id = kfamily$id,
+  TOA_derivado = TOA_derivado,
+  origen = ifelse(!is.na(toa_from_fpt), "fptX",
+                  ifelse(!is.na(toa_from_cfp), "cfp", "none"))
+)
+
+# Guardar como .csv y .rds en la carpeta principal
+write.csv(TOA_derivado_full, "TOA_derivado_full.csv", row.names = FALSE)
+saveRDS(TOA_derivado_full, "TOA_derivado_full.rds")
