@@ -186,6 +186,8 @@ if (sum(valid_indices_cfp) > 1) {
 }
 message(paste("Número de TOAs derivados de cfp/cbyr:", sum(!is.na(toa_from_cfp))))
 
+# ------------------------- END Other atempts ----------------------------------
+
 
 # --- 3. Análisis cualitativo de fp1 (Experience with an FP practice) ---
 # fp1: 0=NA, 1=Never, 2=Ever

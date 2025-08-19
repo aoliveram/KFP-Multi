@@ -1,6 +1,10 @@
 # Load required libraries
 library(ggplot2)
 
+library(netdiffuseR)
+
+KFP <- kfamilyDiffNet
+
 # Access the relevant data from KFP
 village <- KFP$vertex.static.attrs$village  # Village labels
 toa <- KFP$toa  # Time of adoption (TOA)
