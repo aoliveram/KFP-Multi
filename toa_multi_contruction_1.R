@@ -138,7 +138,7 @@ for (j in 1:length(actual_method_codes_numeric_sorted)) {
 sort(cfp_prevalence, decreasing = TRUE)
 
 # ----------------------------------------------------------------------------
-# 3.1) Matriz de prevalencia SOLO con cfp + cbyr
+# 3.1) Prevalencia cfp + cbyr TOTAL
 # ----------------------------------------------------------------------------
 # En lugar de replicar la distribución de cfp en todas las columnas, usamos cbyr
 # para ubicar a cada observación en su periodo correspondiente.
@@ -191,9 +191,7 @@ for (p in seq_len(num_periods)) {
 }
 print(round(prevalence_cfp_percentage_of_users, 2))
 
-# -------------------------------------------------------------------------------------
-# Visualización
-# -------------------------------------------------------------------------------------
+# Visualización --------------------------
 
 # Data frame largo para graficar
 prevalence_cfp_df_long <- as.data.frame(prevalence_matrix_cfp)
@@ -211,7 +209,7 @@ prevalence_cfp_df_long$Periodo <- as.integer(prevalence_cfp_df_long$Periodo)
 plot_bar_cfp <- ggplot(prevalence_cfp_df_long, aes(x = Periodo, y = Conteo, fill = Metodo)) +
   geom_bar(stat = "identity", position = "stack") +
   scale_x_continuous(breaks = 1:num_periods) +
-  labs(title = "Prevalence of modern methods per period (cfp + cbyr)",
+  labs(title = "Prevalence of modern methods per period (cfp + cbyr) TOTAL",
        subtitle = "Cada observación se ubica en el periodo según cbyr",
        x = "Period (1..12)",
        y = "Users") +
@@ -221,7 +219,7 @@ print(plot_bar_cfp)
 ggsave("preval-methods-cfp-cbyr.pdf", plot = plot_bar_cfp, width = 9, height = 6)
 
 # ----------------------------------------------------------------------------
-# 3.2) Opción B: sumar cfp SOLO para quienes nunca reportaron moderno en fptX
+# 3.2) Prevalencia cfp + cbyr (para quienes NUNCA reportaron moderno en fptX)
 # ----------------------------------------------------------------------------
 # Identificamos quiénes NUNCA reportaron un método moderno en fpt1..fpt12
 fpt_vars <- paste0("fpt", 1:num_periods)
@@ -259,24 +257,35 @@ for (i in cfp_only_rows) {
 }
 print(cfp_only_matrix)
 
+# Visualización (solo complemento cfp) --------------------------
+
+prevalence_cfp_only_df_long <- as.data.frame(cfp_only_matrix)
+prevalence_cfp_only_df_long$Metodo <- factor(rownames(prevalence_cfp_only_df_long), levels = rownames(prevalence_matrix))
+prevalence_cfp_only_df_long <- tidyr::pivot_longer(
+  prevalence_cfp_only_df_long,
+  cols = starts_with("Periodo_"),
+  names_to = "Periodo",
+  values_to = "Conteo",
+  names_prefix = "Periodo_"
+)
+prevalence_cfp_only_df_long$Periodo <- as.integer(prevalence_cfp_only_df_long$Periodo)
+
+plot_bar_cfp_only <- ggplot(prevalence_cfp_only_df_long, aes(x = Periodo, y = Conteo, fill = Metodo)) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_x_continuous(breaks = 1:num_periods) +
+  labs(title = "Prevalence of modern methods per period (cfp complement only)",
+       subtitle = "Solo mujeres nunca-modernas en fptX; carry-forward desde cbyr",
+       x = "Period (fptX)",
+       y = "Users") +
+  theme_minimal()
+print(plot_bar_cfp_only)
+
+ggsave("preval-methods-cfp-complement-only.pdf", plot = plot_bar_cfp_only, width = 9, height = 6)
+
 # Matriz total = fptX + complemento cfp (solo nunca-modernos en fptX, por periodo)
 prevalence_matrix_tot <- prevalence_matrix + cfp_only_matrix
 
-# Denominadores por periodo para % (fptX + complemento cfp)
-# prevalence_tot_percentage_of_users <- prevalence_matrix_tot
-# for (period in 1:num_periods) {
-#   fpt_var_name <- paste0("fpt", period)
-#   if (!(fpt_var_name %in% names(kfamily))) next
-
-#   # Total usuarias modernas en fptX del periodo + el complemento cfp de no-modernos
-#   total_users_in_period <- sum(kfamily[[fpt_var_name]] %in% actual_method_codes_numeric_sorted, na.rm = TRUE)
-#   total_users_in_period <- total_users_in_period + sum(cfp_only_matrix[, period])
-#   if (total_users_in_period > 0) {
-#     prevalence_tot_percentage_of_users[, period] <- (prevalence_matrix_tot[, period] / total_users_in_period) * 100
-#   } else {
-#     prevalence_tot_percentage_of_users[, period] <- 0
-#   }
-# }
+# Visualización --------------------------
 
 # Graficamos la prevalencia total: conteos y %
 prevalence_tot_df_long <- as.data.frame(prevalence_matrix_tot)
@@ -290,21 +299,10 @@ prevalence_tot_df_long <- tidyr::pivot_longer(
 )
 prevalence_tot_df_long$Periodo <- as.integer(prevalence_tot_df_long$Periodo)
 
-# prevalence_tot_pct_df_long <- as.data.frame(prevalence_tot_percentage_of_users)
-# prevalence_tot_pct_df_long$Metodo <- factor(rownames(prevalence_tot_pct_df_long), levels = rownames(prevalence_matrix))
-# prevalence_tot_pct_df_long <- tidyr::pivot_longer(
-#   prevalence_tot_pct_df_long,
-#   cols = starts_with("Periodo_"),
-#   names_to = "Periodo",
-#   values_to = "Porcentaje",
-#   names_prefix = "Periodo_"
-# )
-# prevalence_tot_pct_df_long$Periodo <- as.integer(prevalence_tot_pct_df_long$Periodo)
-
 plot_bar_total <- ggplot(prevalence_tot_df_long, aes(x = Periodo, y = Conteo, fill = Metodo)) +
   geom_bar(stat = "identity", position = "stack") +
   scale_x_continuous(breaks = 1:num_periods) +
-  labs(title = "Prevalence of modern methods per period (fptX + cfp para no-modernos)",
+  labs(title = "Prevalence of modern methods per period (fptX + cfp-only)",
        subtitle = "cfp solo aporta para quienes jamás reportaron moderno en fptX",
        x = "Period (fptX)",
        y = "Users") +
@@ -317,10 +315,10 @@ ggsave("preval-methods-total.pdf", plot = plot_bar_total, width = 9, height = 6)
 # --- Gráfico comparativo: fptX vs cfp-only vs Total -------------
 prevalence_fpt_df_long <- prevalence_df_long %>%
   dplyr::mutate(Scenario = "fptX")
-prevalence_cfp_df_long2 <- prevalence_cfp_df_long %>%
+prevalence_cfp_df_long2 <- prevalence_cfp_only_df_long %>%
   dplyr::mutate(Scenario = "cfp-only")
 prevalence_tot_df_long2 <- prevalence_tot_df_long %>%
-  dplyr::mutate(Scenario = "Total (fptX + cfp)")
+  dplyr::mutate(Scenario = "Total (fptX + cfp-only)")
 
 prevalence_compare_long <- dplyr::bind_rows(
   prevalence_fpt_df_long,
