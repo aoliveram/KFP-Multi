@@ -1,5 +1,18 @@
 # Calcula el TOA derivado de los datos de KFP, priorizando fptX/byrtX y luego cfp/cbyr.
 
+# Número total de TOA encontrados fptX/byrtX distintos de 11: 422 de 673 (62.7%)
+
+# TOA tiene 1047.
+# Número de TOAs derivados de fptX/byrtX: 422 (40.31%) 
+# Número de TOAs derivados (como relleno) de cfp/cbyr: 175 (16.71%)
+# Número de TOAs asignados como '11' (no adoptadores restantes): 374 (35.72%)
+# En total suman: 971 (92.74%)
+
+# Número de coincidencias exactas fpt: 386 de 422. Porcentaje de coincidencias exactas fpt: 91.47 %
+# Número de coincidencias exactas cfp: 153 de 368. Porcentaje de coincidencias exactas cfp: 87.43 %
+# Número de coincidencias exactas: 913 de 1047 (87.2%)
+
+
 # --- RESUMEN FINAL Y CONSTRUCCIÓN DE TOA_DERIVADO ---
 
 library(netdiffuseR)
@@ -86,6 +99,23 @@ for (i in 1:n_obs) {
 
 min(toa_from_cfp, na.rm = TRUE)
 toa_from_cfp <- toa_from_cfp - 1963
+
+# Índices donde fptX pudo derivar el TOA
+valid_indices_fpt_idx <- which(!is.na(toa_from_fpt))
+
+# Comparación directa (TRUE/FALSE) entre TOA original y TOA derivado solo con fptX
+comparison_fpt <- toa_original[valid_indices_fpt_idx] == toa_from_fpt[valid_indices_fpt_idx]
+
+# Resumen de coincidencias exactas
+num_coincidencias_fpt <- sum(comparison_fpt, na.rm = TRUE)
+porcentaje_coincidencias_fpt <- round(num_coincidencias_fpt / length(valid_indices_fpt_idx) * 100, 2)
+
+message(paste("Número de coincidencias exactas fptX/byrtX:", num_coincidencias_fpt, "de", length(valid_indices_fpt_idx),
+              paste0("(", porcentaje_coincidencias_fpt, "%)")))
+message(paste("Número total de TOA encontrados fptX/byrtX distintos de 11:", length(valid_indices_fpt_idx), "de", length(toa_without_11),
+              paste0("(", round(length(valid_indices_fpt_idx) / length(toa_without_11) * 100, 2), "%)")))
+
+# Índices donde cfp/cbyr pudo derivar el TOA
 valid_indices_cfp <- !is.na(toa_from_cfp)
 
 # --- Construcción del TOA_derivado final ---
