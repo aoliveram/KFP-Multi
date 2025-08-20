@@ -1,10 +1,5 @@
 # Calcula matriz de transición de métodos anticonceptivos
 
-# Asumiendo que kfamily, fpstatus_labels, num_periods, n_obs,
-# actual_method_codes_numeric_sorted (con los códigos de métodos modernos que se analizan),
-# code_loop, code_pill (códigos numéricos específicos) ya existen.
-
-
 library(netdiffuseR)
 data(kfamily)   
 
@@ -227,3 +222,124 @@ if(length(transitions_list) > 0){
 
 # Nota: Los 'actual_method_codes_numeric_sorted' usados para definir métodos modernos en este script son:"
 print(data.frame(Nombre = actual_method_labels_sorted, Codigo = actual_method_codes_numeric_sorted))
+
+# ----------------------------------------------------------------------------------
+# Construcción y guardado de la Matriz de Transiciones 
+# ----------------------------------------------------------------------------------
+
+# 2. Inicializar la matriz con ceros. Las filas (From) y columnas (To)
+transition_matrix <- matrix(0,
+          nrow = length(actual_method_labels_sorted),
+          ncol = length(actual_method_labels_sorted),
+          dimnames = list(From = actual_method_labels_sorted, To = actual_method_labels_sorted))
+
+# 3. Rellenar la matriz recorriendo los datos (misma lógica que transitions_df)
+for (i in 1:n_obs) {
+  previous_modern_method_code <- NA
+  for (period in 1:num_periods) {
+    fpt_var_name <- paste0("fpt", period)
+    if (!(fpt_var_name %in% names(kfamily))) next
+    
+    current_fpt_code <- kfamily[i, fpt_var_name]
+    
+    # Si el método actual es uno de los modernos...
+    if (!is.na(current_fpt_code) && current_fpt_code %in% actual_method_codes_numeric_sorted) {
+      
+      # Y si hubo un método moderno previo que es diferente al actual...
+      if (!is.na(previous_modern_method_code) && previous_modern_method_code != current_fpt_code) {
+        
+        # ...entonces tenemos una transición.
+        from_method_label <- code_to_label_map[as.character(previous_modern_method_code)]
+        to_method_label <- code_to_label_map[as.character(current_fpt_code)]
+        
+        # Incrementar el contador en la celda correspondiente de la matriz
+        transition_matrix[from_method_label, to_method_label] <- transition_matrix[from_method_label, to_method_label] + 1
+      }
+      # Actualizar el método previo para la siguiente iteración
+      previous_modern_method_code <- current_fpt_code
+      
+    } else {
+      # Si no hay un método moderno, se resetea la memoria.
+      previous_modern_method_code <- NA
+    }
+  }
+}
+
+# 4. Mostrar la matriz resultante en la consola
+message("Matriz de Transiciones (Desde -> Hacia):")
+print(transition_matrix)
+
+# 5. Guardar
+write.csv(transition_matrix, "transition_matrix.csv", row.names = TRUE)
+saveRDS(transition_matrix, "transition_matrix.rds")
+
+# -----------------------------------------------------------------------------------
+# --- Matriz de Transiciones Completa ---
+# -----------------------------------------------------------------------------------
+
+# 1. Definir todos los estados posibles y crear un mapa de código a etiqueta
+# Los `fpstatus_labels` ya contienen todos los códigos y sus nombres.
+all_status_labels <- names(fpstatus_labels)
+all_status_codes <- as.numeric(fpstatus_labels)
+code_to_label_map_full <- setNames(all_status_labels, all_status_codes)
+
+# Ordenar los nombres para que la matriz sea consistente y fácil de leer
+all_status_labels_sorted <- sort(all_status_labels)
+
+# 2. Inicializar la matriz completa con ceros
+# Las filas son 'Desde' (From) y las columnas son 'Hacia' (To)
+complete_transition_matrix <- matrix(0,
+                                     nrow = length(all_status_labels_sorted),
+                                     ncol = length(all_status_labels_sorted),
+                                     dimnames = list(From = all_status_labels_sorted, To = all_status_labels_sorted))
+
+# 3. Rellenar la matriz recorriendo los datos de fptX
+# La lógica es la misma que antes, pero SIN FILTRAR por métodos modernos.
+for (i in 1:n_obs) {
+  previous_status_code <- NA # Usamos un nombre más general ahora
+  
+  for (period in 1:num_periods) {
+    fpt_var_name <- paste0("fpt", period)
+    if (!(fpt_var_name %in% names(kfamily))) next
+    
+    current_status_code <- kfamily[i, fpt_var_name]
+    
+    # Solo necesitamos que el estado actual sea válido (no NA)
+    if (!is.na(current_status_code)) {
+      
+      # Si hubo un estado previo y es DIFERENTE al actual, es una transición.
+      if (!is.na(previous_status_code) && previous_status_code != current_status_code) {
+        
+        # Obtener las etiquetas de texto para el estado previo y actual
+        from_label <- code_to_label_map_full[as.character(previous_status_code)]
+        to_label <- code_to_label_map_full[as.character(current_status_code)]
+        
+        # Incrementar el contador en la celda correspondiente de la matriz
+        # Nos aseguramos de que las etiquetas existan en los nombres de la matriz
+        if (!is.na(from_label) && !is.na(to_label) && 
+            from_label %in% rownames(complete_transition_matrix) && 
+            to_label %in% colnames(complete_transition_matrix)) {
+              
+          complete_transition_matrix[from_label, to_label] <- complete_transition_matrix[from_label, to_label] + 1
+        }
+      }
+      
+      # Actualizar el estado previo para la siguiente iteración
+      previous_status_code <- current_status_code
+      
+    } else {
+      # Si el estado actual es NA, se resetea la "memoria" del estado previo.
+      # Esto evita contar una transición entre, por ej., fpt2 y fpt4 si fpt3 es NA.
+      previous_status_code <- NA
+    }
+  }
+}
+
+# 4. Mostrar la matriz completa resultante en la consola
+# Nota: Será una matriz grande (21x21 en este caso)
+message("\nMatriz de Transiciones Completa (Desde -> Hacia):")
+print(complete_transition_matrix)
+
+# 5. Guardar 
+write.csv(complete_transition_matrix, "complete_transition_matrix.csv", row.names = TRUE)
+saveRDS(complete_transition_matrix, "complete_transition_matrix.rds")
