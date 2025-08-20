@@ -246,3 +246,72 @@ for (i in 1:length(toa_list_strategy2)) {
 }
 par(op)  # restaurar parámetros gráficos
 dev.off()
+
+
+# ------------------------------------------------------------------------------------
+# --- 4. Construcción del TOA derivado con MÉTODO ---
+# ------------------------------------------------------------------------------------
+
+n_obs <- length(toa_list_strategy2[[1]])
+TOA_derivado <- rep(NA, n_obs)
+TOA_derivado_metodo <- rep(NA, n_obs)
+
+method_order <- c("Loop", "Pill", "Condom", "Otros_Modernos_v2")
+
+for (i in 1:n_obs) {
+  for (method in method_order) {
+    toa_val <- toa_list_strategy2[[method]][i]
+    if (!is.na(toa_val)) {
+      TOA_derivado[i] <- toa_val
+      TOA_derivado_metodo[i] <- method
+      break
+    }
+  }
+  # Si ninguno es moderno, queda NA
+}
+
+TOA_derivado_obj <- data.frame(
+  id = 1:n_obs,
+  TOA_derivado = TOA_derivado,
+  metodo_origen = TOA_derivado_metodo
+)
+
+# Guardar como .csv y .rds
+write.csv(TOA_derivado_obj, "TOA_derivado_from_strategy2.csv", row.names = FALSE)
+saveRDS(TOA_derivado_obj, "TOA_derivado_from_strategy2.rds")
+
+# Para cargar en otros scripts:
+# TOA_derivado_obj <- read.csv("TOA_derivado_from_strategy2.csv")
+#
+
+# Comparar ----------------------------------------------------------------------------------
+
+TOA_derivado_full <- read.csv("TOA_derivado_full.csv")
+TOA_derivado_orig <- TOA_derivado_full$TOA_derivado
+
+TOA_derivado_new <- TOA_derivado_obj$TOA_derivado
+
+# Filtrar índices donde TOA_derivado_orig es distinto de 11 y no es NA
+valid_indices <- which(!is.na(TOA_derivado_orig) & TOA_derivado_orig != 11)
+
+# Comparar, tratando NA en TOA_derivado_new como FALSE
+comparison <- mapply(function(orig, new) {
+  if (is.na(new)) {
+    FALSE
+  } else {
+    orig == new
+  }
+}, TOA_derivado_orig[valid_indices], TOA_derivado_new[valid_indices])
+
+# Resumen de la comparación
+cat("Coinc:", sum(comparison), "/", length(comparison), ". Diff:", sum(!comparison), "\n")
+
+# Opcional: mostrar los casos donde difieren
+if (sum(!comparison) > 0) {
+  cat("Índices con diferencias:\n")
+  print(valid_indices[!comparison])
+  cat("Valores originales:\n")
+  print(TOA_derivado_orig[valid_indices[!comparison]])
+  cat("Valores nuevos:\n")
+  print(TOA_derivado_new[valid_indices[!comparison]])
+}
