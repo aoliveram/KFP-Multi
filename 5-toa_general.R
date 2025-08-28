@@ -179,3 +179,135 @@ message("Dim status_code: ", paste(dim(status_code), collapse = " x "),
 # TODO (futuro):
 # - Versión alternativa de 'transitions' que incluya autotransiciones (from == to)
 #   y/o estrategias diferentes frente a NAs (carry-forward vs. break).
+
+# -------------------------------------
+# 8) Checks: Build TOA_standard_from_general (BYRT/CBYR-anchored)
+# -------------------------------------
+
+# Objetivo: reconstruir un TOA en escala 1..10 replicando la lógica temporal del derivado/original
+#  - Usar SIEMPRE byrtX para anclar el índice 1..10 cuando fptX indique método moderno.
+#  - Si no hay byrtX válido, usar cfp/cbyr para anclar el índice 1..10.
+#  - Si nada aplica, asignar 11 (no adoptante) y origen = "none".
+
+# 8.1) Matriz byrt_index (n x P) con índices 1..10 a partir de byrt1..byrt12
+n <- nrow(TOA_derivado_general$meta)
+P <- length(TOA_derivado_general$periods)
+
+byrt_index <- matrix(NA_integer_, nrow = n, ncol = P,
+                     dimnames = list(NULL, paste0("t", 1:P)))
+for (p in 1:P) {
+  byrt_col <- paste0("byrt", p)
+  if (byrt_col %in% names(kfamily)) {
+    vals <- kfamily[[byrt_col]]
+    yrs  <- year_map[as.character(vals)]                    # 1964..1973
+    idx  <- ifelse(!is.na(yrs), as.integer(yrs) - 1963L, NA_integer_) # 1..10
+    idx[!(idx >= 1L & idx <= 10L)] <- NA_integer_           # limitar a 1..10
+    byrt_index[, p] <- idx
+  }
+}
+
+# 8.2) Definir métodos modernos y mapear a códigos
+modern_methods_names <- c("Loop", "Condom", "Oral Pill", "Vasectomy", "TL", "Injection", "Rhythm", "Withdrawal")
+modern_codes <- unname(TOA_derivado_general$codes$label_to_code[modern_methods_names])
+modern_codes <- as.integer(modern_codes[!is.na(modern_codes)])
+
+# 8.3) Construir TOA_standard_from_general (1..10 o 11) + origen
+TOA_standard <- rep(NA_integer_, n)
+origen_vec   <- rep(NA_character_, n)
+
+for (i in seq_len(n)) {
+  # Candidatos desde fptX + byrtX: fuente fpt (1) y estado moderno
+  fpt_is_modern <- (TOA_derivado_general$source[i, ] == 1L) &
+                   (!is.na(TOA_derivado_general$status_code[i, ])) &
+                   (TOA_derivado_general$status_code[i, ] %in% modern_codes)
+  idx_candidates <- byrt_index[i, fpt_is_modern]
+  idx_candidates <- idx_candidates[!is.na(idx_candidates)]  # 1..10
+
+  if (length(idx_candidates) > 0) {
+    t0 <- min(idx_candidates)
+    TOA_standard[i] <- as.integer(t0)
+    origen_vec[i]   <- "fptX"
+  } else {
+    # Fallback: cfp/cbyr
+    cfp_i  <- kfamily$cfp[i]
+    cbyr_i <- kfamily$cbyr[i]
+    if (!is.na(cfp_i) && cfp_i %in% modern_codes && !is.na(cbyr_i)) {
+      yr  <- year_map[as.character(cbyr_i)]
+      idx <- ifelse(!is.na(yr), as.integer(yr) - 1963L, NA_integer_)
+      if (!is.na(idx) && idx >= 1L && idx <= 10L) {
+        TOA_standard[i] <- as.integer(idx)
+        origen_vec[i]   <- "cfp"
+      } else {
+        TOA_standard[i] <- 11L
+        origen_vec[i]   <- "none"
+      }
+    } else {
+      TOA_standard[i] <- 11L
+      origen_vec[i]   <- "none"
+    }
+  }
+}
+
+# --- Alineación opcional de NA con TOA_derivado_full ---
+
+TOA_derivado_full <- readRDS("TOA_derivado_full.rds")
+# Construimos llaves para hacer el cruce sin merge pesado
+key_std <- paste(TOA_derivado_general$meta$global_id, TOA_derivado_general$meta$specific_id)
+key_der <- paste(TOA_derivado_full$global_id, TOA_derivado_full$specific_id)
+na_mask <- key_std %in% key_der[is.na(TOA_derivado_full$TOA_derivado)]
+n_aligned <- sum(na_mask, na.rm = TRUE)
+if (n_aligned > 0) {
+  TOA_standard[na_mask] <- NA_integer_
+  message(sprintf("[std] Alineación NA aplicada: %d casos establecidos en NA para TOA_standard (según TOA_derivado NA).", n_aligned))
+} else {
+  message("[std] Alineación NA: 0 casos a ajustar.")
+}
+
+TOA_standard_from_general <- data.frame(
+  global_id    = TOA_derivado_general$meta$global_id,
+  specific_id  = TOA_derivado_general$meta$specific_id,
+  TOA_standard = TOA_standard,
+  origen       = origen_vec,
+  stringsAsFactors = FALSE
+)
+
+saveRDS(TOA_standard_from_general, file = "TOA_standard_from_general.rds")
+write.csv(TOA_standard_from_general, file = "TOA_standard_from_general.csv", row.names = FALSE)
+
+message("TOA_standard_from_general creado: ", nrow(TOA_standard_from_general), " filas.")
+
+# 8.4) Comparaciones mínimas
+# (i) vs TOA_original (kfamily$toa)
+TOA_original_netdiffuseR <- data.frame(
+  global_id   = TOA_derivado_general$meta$global_id,
+  specific_id = TOA_derivado_general$meta$specific_id,
+  TOA_original = as.integer(kfamily$toa),
+  stringsAsFactors = FALSE
+)
+
+comp_std_orig <- merge(
+  TOA_standard_from_general, TOA_original_netdiffuseR,
+  by = c("global_id","specific_id"), all = TRUE
+)
+comp_std_orig$agree_toa <- with(comp_std_orig, TOA_standard == TOA_original)
+
+n_both_so <- sum(!is.na(comp_std_orig$TOA_standard) & !is.na(comp_std_orig$TOA_original))
+n_agree_so <- sum(comp_std_orig$agree_toa, na.rm = TRUE)
+message(sprintf("[std] vs original — presentes ambos: %d; coincidencias: %d (%.2f%%)",
+                n_both_so, n_agree_so, 100*n_agree_so/max(1, n_both_so)))
+message("[std] difs (TOA_standard - TOA_original):")
+print(table(comp_std_orig$TOA_standard - comp_std_orig$TOA_original, useNA = "ifany"))
+
+# (ii) vs TOA_derivado_full (si existe)
+
+comp_std_full <- merge(
+  TOA_standard_from_general, TOA_derivado_full,
+  by = c("global_id","specific_id"), all = TRUE
+)
+comp_std_full$agree_toa <- with(comp_std_full, TOA_standard == TOA_derivado)
+n_both_sf <- sum(!is.na(comp_std_full$TOA_standard) & !is.na(comp_std_full$TOA_derivado))
+n_agree_sf <- sum(comp_std_full$agree_toa, na.rm = TRUE)
+message(sprintf("[std] vs derivado_full — presentes ambos: %d; coincidencias: %d (%.2f%%)",
+                n_both_sf, n_agree_sf, 100*n_agree_sf/max(1, n_both_sf)))
+message("[std] difs (TOA_standard - TOA_derivado):")
+print(table(comp_std_full$TOA_standard - comp_std_full$TOA_derivado, useNA = "ifany"))
