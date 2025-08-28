@@ -18,6 +18,10 @@
 library(netdiffuseR)
 data(kfamily)       
 
+# IDs
+global_id <- seq_len(nrow(kfamily))
+specific_id <- paste(kfamily$comm, kfamily$id, sep = "_")
+
 # TOA original
 toa_original <- kfamily$toa
 toa_without_11 <- toa_original[toa_original != 11]
@@ -188,7 +192,8 @@ print(table(diff_final, useNA="ifany"))
 
 # Construir objeto con TOA_derivado y su origen
 TOA_derivado_full <- data.frame(
-  id = kfamily$id,
+  global_id = global_id,
+  specific_id = specific_id,
   TOA_derivado = TOA_derivado,
   origen = ifelse(!is.na(toa_from_fpt), "fptX",
                   ifelse(!is.na(toa_from_cfp), "cfp", "none"))
