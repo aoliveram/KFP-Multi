@@ -84,8 +84,6 @@ if (!is.null(media_exposure)) {
 kids <- NULL
 if (all(c("sons","daughts") %in% names(kfamily))) {
   kids <- kfamily$sons + kfamily$daughts
-} else if ("children" %in% names(kfamily)) {
-  kids <- kfamily$children
 }
 
 if (!is.null(kids)) {
@@ -153,3 +151,135 @@ m_tbl102_vil <- diffreg(
   type = "logit"
 )
 summary(m_tbl102_vil)
+
+
+# Parametric time trend version of the village model (linear Time instead of FE)
+m_tbl102_vil_b <- diffreg(
+  dn ~ exposure + exposure_se + deg_in + deg_out + media_exposure + children + per + cum_num_vil,
+  type = "logit"
+)
+summary(m_tbl102_vil_b)
+
+# ============================================================================
+# REDEFINE "MODERN METHODS" (6 methods) AND RE-RUN VILLAGE CUM-ADOPTION MODEL
+# ----------------------------------------------------------------------------
+# New modern set: Loop, Oral Pill, Condom, Vasectomy, TL, Injection
+# Goal: recompute TOA under this definition, rebuild exposures, and refit
+#       the Table 10-2-style model with village-level cumulative adoption.
+# ----------------------------------------------------------------------------
+
+# Safety: infer T and n from the existing object
+Tt <- 11L
+n  <- nrow(kfamily)
+
+# 1) Map fpstatus labels <-> codes
+stopifnot(!is.null(attr(kfamily, "label.table")$fpstatus))
+labtab <- attr(kfamily, "label.table")$fpstatus
+label_to_code <- unclass(labtab)                 # named numeric
+code_to_label <- setNames(names(labtab), labtab)
+
+modern6_names <- c("Loop", "Oral Pill", "Condom", "Vasectomy", "TL", "Injection")
+modern6_codes <- unname(label_to_code[modern6_names])
+
+# 2) Derive TOA (first period 1..Tt where fpstatus is one of modern6)
+fp_cols <- paste0("fpt", 1:Tt)
+stopifnot(all(fp_cols %in% names(kfamily)))
+
+# Build an n x T matrix of statuses (numeric codes)
+fp_mat <- as.matrix(kfamily[, fp_cols])
+
+# First time index with a modern6 code
+toa6 <- rep(NA_integer_, n)
+for (i in seq_len(n)) {
+  row_codes <- fp_mat[i, ]
+  if (all(is.na(row_codes))) next
+  hit <- which(row_codes %in% modern6_codes)
+  if (length(hit)) toa6[i] <- min(hit)
+}
+
+# Optional fallback using cfp/cbyr if available
+if (all(c("cfp","cbyr") %in% names(kfamily))) {
+  # Year map used earlier in your scripts (byr digit -> calendar year)
+  year_map <- c("4"=1964,"5"=1965,"6"=1966,"7"=1967,"8"=1968,
+                "9"=1969,"0"=1970,"1"=1971,"2"=1972,"3"=1973)
+  for (i in seq_len(n)) {
+    if (!is.na(toa6[i])) next
+    if (is.na(kfamily$cfp[i]) || is.na(kfamily$cbyr[i])) next
+    if (kfamily$cfp[i] %in% modern6_codes) {
+      yr_chr <- as.character(kfamily$cbyr[i])
+      if (!is.na(year_map[yr_chr])) {
+        # Map to step 1..10 (keep bounded within 1..Tt)
+        step <- as.integer(year_map[yr_chr] - 1963L)
+        if (!is.na(step)) toa6[i] <- max(1L, min(Tt, step))
+      }
+    }
+  }
+}
+
+# 3) Build a new diffnet object by cloning dn but replacing adoption timing
+#    (we keep the same graphs/networks as before)
+dn6 <- dn
+attr(dn6, "name") <- "KFP (modern6)"
+dn6$toa <- toa6
+
+# 4) Recompute exposures (cohesion and structural equivalence) for dn6
+#    NOTE: exposure() uses dn6$toa internally
+try({ dn6[["exposure"]]    <- exposure(dn6) }, silent = TRUE)
+try({ dn6[["exposure_se"]] <- exposure(dn6, alt.graph = "se", groupvar = "village", valued = TRUE) }, silent = TRUE)
+
+# 5) Carry over / (re)attach covariates that don’t depend on adoption timing
+#    Graph-based degrees are the same networks, so reuse from dn
+if (!is.null(dn[["deg_in"]]))  dn6[["deg_in"]]  <- dn[["deg_in"]]
+if (!is.null(dn[["deg_out"]])) dn6[["deg_out"]] <- dn[["deg_out"]]
+# Dynamic period factor and individual covariates
+if (!is.null(dn[["per"]]))            dn6[["per"]]            <- dn[["per"]]
+if (!is.null(dn[["media_exposure"]])) dn6[["media_exposure"]] <- dn[["media_exposure"]]
+if (!is.null(dn[["children"]]))       dn6[["children"]]       <- dn[["children"]]
+
+# 6) Village-level cumulative adoption under the modern6 definition
+vill6 <- kfamily$village
+adopt_mat6 <- matrix(0L, nrow = n, ncol = Tt)
+for (tt in seq_len(Tt)) adopt_mat6[, tt] <- as.integer(!is.na(toa6) & toa6 <= tt)
+
+Gs <- sort(unique(vill6))
+g_sizes <- setNames(sapply(Gs, function(g) sum(vill6 == g)), Gs)
+
+cum_num_vil6 <- matrix(NA_real_, nrow = n, ncol = Tt)
+for (tt in seq_len(Tt)) {
+  counts_by_g <- setNames(sapply(Gs, function(g) sum(adopt_mat6[vill6 == g, tt], na.rm = TRUE)), Gs)
+  cum_num_vil6[, tt] <- counts_by_g[as.character(vill6)]
+}
+
+dn6[["cum_num_vil6"]] <- cum_num_vil6
+
+# 7) Refit the Table 10-2 style model with the new modern6 definition
+m_tbl102_vil_mod6 <- diffreg(
+  dn6 ~ exposure + exposure_se + deg_in + deg_out + media_exposure + children + factor(per) + cum_num_vil6,
+  type = "logit"
+)
+cat("\n==================== Modern(6) model ====================\n")
+print(summary(m_tbl102_vil_mod6))
+
+
+# Parametric time trend version under modern(6) definition
+
+m_tbl102_vil_mod6_b <- diffreg(
+  dn6 ~ exposure + exposure_se + deg_in + deg_out + media_exposure + children + per + cum_num_vil6,
+  type = "logit"
+)
+summary(m_tbl102_vil_mod6_b)
+
+# ============================================================================
+# 8) Quick side-by-side AIC/BIC compare (original 8-method vs new 6-method)
+if (exists("m_tbl102_vil")) {
+  cat("\nModel fit comparison (lower is better):\n")
+  aic_old <- tryCatch(AIC(m_tbl102_vil), error = function(e) NA)
+  aic_new <- tryCatch(AIC(m_tbl102_vil_mod6), error = function(e) NA)
+  bic_old <- tryCatch(BIC(m_tbl102_vil), error = function(e) NA)
+  bic_new <- tryCatch(BIC(m_tbl102_vil_mod6), error = function(e) NA)
+  print(data.frame(
+    model = c("modern(8)", "modern(6)"),
+    AIC   = c(aic_old, aic_new),
+    BIC   = c(bic_old, bic_new)
+  ))
+}
