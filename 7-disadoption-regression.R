@@ -343,3 +343,33 @@ barplot(t(as.matrix(by_t[, c("cessation","substitution")])),
 legend("topright", fill = c("gray70","gray30"),
        legend = c("Cessation","Substitution"), bty = "n")
 dev.off()
+
+# ---------------------------------------------------------------
+# Where do "cessation" events go?  (drop-in after your script)
+# ---------------------------------------------------------------
+
+# 1) Indices of ever-modern individuals and their stable-disadoption time
+idx_em       <- which(ever_modern)
+evt_time_em  <- event_time[idx_em]
+
+# Keep only valid event times in [2..Tt]
+ok           <- !is.na(evt_time_em) & evt_time_em >= 2L & evt_time_em <= Tt
+idx_em_ok    <- idx_em[ok]
+t_em_ok      <- evt_time_em[ok]
+
+# 2) Among those, keep only *cessation* events (meta_state == 0 at t = t_last+1)
+is_cessation <- meta_state[cbind(idx_em_ok, t_em_ok)] == 0L
+idx_ces      <- idx_em_ok[is_cessation]
+t_ces        <- t_em_ok[is_cessation]
+
+# 3) Grab the ORIGINAL fp-state code at the destination time, map to labels
+dest_code  <- fp_mat[cbind(idx_ces, t_ces)]
+dest_label <- code_to_label[as.character(dest_code)]
+dest_label[is.na(dest_label)] <- "NA/Unknown"
+
+# 4) Tally + percentages
+tab  <- sort(table(dest_label), decreasing = TRUE)
+pct  <- round(100 * prop.table(tab), 1)
+
+print(tab)
+print(pct)
