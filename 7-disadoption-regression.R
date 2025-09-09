@@ -3,9 +3,7 @@
 # Fully self-contained; no external objects required
 # ================================================================
 
-suppressPackageStartupMessages({
-  library(netdiffuseR)
-})
+library(netdiffuseR)
 
 # --------------------------- Load & prep ------------------------
 data(kfamily, package = "netdiffuseR")
@@ -162,10 +160,8 @@ fec_ratio_from_age <- function(a) {
 fec_t <- matrix(fec_ratio_from_age(c(age_t)), nrow = n, ncol = Tt)
 
 # --------------------- Build hazard panel -----------------------
-# Discrete-time hazard robustly (no t = 1 allowed):
-#   Y_{it} = 1 if i’s stable disadoption occurs at time t (i.e., TOD_i == t)
-# At-risk periods: t = 2..Tt for ever-modern rows; use covariates at t-1
 
+# For each ever-modern individual, builds the periods (t) at risk of disadoption, from t=2 up to the event or end of observation.
 at_risk_rows <- lapply(keep_idx, function(i) {
   t_star <- TOD[i]
   # Skip if TOD is NA or TOD < 2; otherwise make 2..min(TOD, Tt)
@@ -175,26 +171,25 @@ at_risk_rows <- lapply(keep_idx, function(i) {
 at_risk_df <- do.call(rbind, at_risk_rows)
 row.names(at_risk_df) <- NULL
 
-# Final sanity checks on indices
+# sanity checks on indices
 stopifnot(nrow(at_risk_df) > 0L)
 stopifnot(all(at_risk_df$t >= 2L & at_risk_df$t <= Tt))
 
-#lag_pick <- function(M) M[cbind(at_risk_df$i, at_risk_df$t - 1L)]
+# Helper function that extracts, for each row of the risk panel, the lagged value (at t-1) from a covariate matrix.
 lag_pick <- function(M) {
   idx <- cbind(at_risk_df$i, at_risk_df$t - 1L)
   bad <- idx[, 1L] < 1L | idx[, 1L] > nrow(M) | idx[, 2L] < 1L | idx[, 2L] > ncol(M)
   if (any(bad)) {
-    nb <- sum(bad)
-    # If you ever want to inspect them:
-    # print(head(idx[bad, , drop = FALSE], 10))
+    nb <- sum(bad) # print(head(idx[bad, , drop = FALSE], 10))
     stop(sprintf("lag_pick: %d invalid (i, t-1) pairs detected; check at_risk_df and Tt", nb))
   }
   M[idx]
 }
 
+# Main df for regression, combining at-risk periods with lagged covariates and outcome for each individual-period.
 panel <- within(at_risk_df, {
   Y            <- as.integer(TOD[i] == t)     # event occurs at t
-  per          <- t
+  time         <- t
   E_adopt_lag  <- lag_pick(E_adopt)
   E_dis_lag    <- lag_pick(E_dis)
   deg_in_lag   <- lag_pick(deg_in)
@@ -207,32 +202,33 @@ panel <- within(at_risk_df, {
   g            <- vill[i]
 })
 
-# Drop rows with missing key predictors
-panel <- subset(panel, !is.na(E_adopt_lag) & !is.na(E_dis_lag) &
-                  !is.na(deg_in_lag)  & !is.na(deg_out_lag) &
-                  !is.na(cumdis_g_lag))
-
 # Time term as a factor if possible
-panel$time_term <- {
-  f <- factor(panel$per)
-  if (nlevels(f) >= 2L) f else as.numeric(panel$per)
+panel$per <- {
+  f <- factor(panel$time)
+  if (nlevels(f) >= 2L) f else as.numeric(panel$time)
 }
+
+# Drop rows with missing key predictors
+panel <- subset(panel, 
+    !is.na(E_adopt_lag) & !is.na(E_dis_lag) & !is.na(deg_in_lag)  &
+    !is.na(deg_out_lag) & !is.na(cumdis_g_lag)
+    )
 
 # ---------------------- Fit three models ------------------------
 
-m_vil_mod6_dis        <- glm(formula = Y ~ E_dis_lag + E_adopt_lag + deg_in_lag + deg_out_lag + time_term + cumdis_g_lag + media_lag + children,
+m_vil_mod6_dis        <- glm(formula = Y ~ E_dis_lag + E_adopt_lag + deg_in_lag + deg_out_lag + per + cumdis_g_lag + media_lag + children,
                              data = panel, family = binomial(link = "logit"))
-m_vil_mod6_dis_b      <- glm(formula = Y ~ E_dis_lag + E_adopt_lag + deg_in_lag + deg_out_lag + time_term + cumdis_g_lag + children,
+m_vil_mod6_dis_b      <- glm(formula = Y ~ E_dis_lag + E_adopt_lag + deg_in_lag + deg_out_lag + per + cumdis_g_lag + children,
                              data = panel, family = binomial(link = "logit"))
-m_vil_mod6_dis_c_age  <- glm(formula = Y ~ E_dis_lag + E_adopt_lag + deg_in_lag + deg_out_lag + time_term + cumdis_g_lag + children + age_lag,
+m_vil_mod6_dis_c_age  <- glm(formula = Y ~ E_dis_lag + E_adopt_lag + deg_in_lag + deg_out_lag + per + cumdis_g_lag + children + age_lag,
                              data = panel, family = binomial(link = "logit"))
-m_vil_mod6_dis_c_fec  <- glm(formula = Y ~ E_dis_lag + E_adopt_lag + deg_in_lag + deg_out_lag + time_term + cumdis_g_lag + children + fec_lag,
+m_vil_mod6_dis_c_fec  <- glm(formula = Y ~ E_dis_lag + E_adopt_lag + deg_in_lag + deg_out_lag + per + cumdis_g_lag + children + fec_lag,
                              data = panel, family = binomial(link = "logit"))
 
-cat("\n=== m_vil_mod6_dis (with media) ===\n");    print(summary(m_vil_mod6_dis))
-cat("\n=== m_vil_mod6_dis_b (no media) ===\n");   print(summary(m_vil_mod6_dis_b))
-cat("\n=== m_vil_mod6_dis_c_age (add age) ===\n");print(summary(m_vil_mod6_dis_c_age))
-cat("\n=== m_vil_mod6_dis_c_fec (add fec) ===\n");print(summary(m_vil_mod6_dis_c_fec))
+cat("\n=== m_vil_mod6_dis (with media) ===\n");    summary(m_vil_mod6_dis)
+cat("\n=== m_vil_mod6_dis_b (no media) ===\n");    summary(m_vil_mod6_dis_b)
+cat("\n=== m_vil_mod6_dis_c_age (add age) ===\n"); summary(m_vil_mod6_dis_c_age)
+cat("\n=== m_vil_mod6_dis_c_fec (add fec) ===\n"); summary(m_vil_mod6_dis_c_fec)
 
 # ---------------------- Diagnostics & compare -------------------
 cat("\n# Rows in panel:", nrow(panel), "\n")
@@ -254,3 +250,96 @@ comp <- data.frame(
   rows   = sapply(fits, function(m) nrow(model.frame(m)))
 )
 cat("\nModel fit comparison (lower is better):\n"); print(comp, row.names = FALSE)
+
+# ================================================================
+# Plot: 
+# A quick check of whether exits from 'Modern' skew toward cessation vs substitution,
+# to gauge if it's worth running separate regressions emphasizing these two pathways.
+# ================================================================
+
+# Event set: ever-modern i with a stable-disadoption time 2..Tt
+evt_ok  <- keep_idx[!is.na(TOD[keep_idx]) & TOD[keep_idx] >= 2L & TOD[keep_idx] <= Tt]
+evt_t   <- TOD[evt_ok]
+
+# Classify by the *state after the last modern use* (t+1), when observable
+next_t  <- evt_t + 1L
+has_next <- next_t <= Tt
+evt_type <- rep(NA_character_, length(evt_ok))
+evt_type[has_next & meta_state[cbind(evt_ok[has_next], next_t[has_next])] == 0L] <- "Cessation"
+evt_type[has_next & meta_state[cbind(evt_ok[has_next], next_t[has_next])] == 1L] <- "Substitution"
+
+# Build a period-by-type table (keep all periods 2..Tt as columns)
+evt_df <- data.frame(
+  t    = factor(evt_t, levels = 2:Tt),
+  type = factor(evt_type, levels = c("Cessation","Substitution"))
+)
+tab_t <- with(evt_df, table(type, t))  # rows: type, cols: period
+tab_t <- tab_t[, levels(evt_df$t), drop = FALSE]  # ensure 2..Tt order
+
+# Plot (stacked bars)
+pdf("disadoption_events_by_time.pdf", width = 6, height = 4.5)
+barplot(tab_t,
+        beside = FALSE,
+        ylim   = c(0, max(colSums(tab_t)) * 1.10),
+        xlab   = "Period (t)",
+        ylab   = "Number of events",
+        main   = "Stable disadoption events by time (ever−modern)",
+        legend.text = TRUE,
+        args.legend = list(x = "topright", bty = "n"))
+dev.off()
+
+
+## ===============================================================
+# ---- 1) Helpers ----
+ever_modern <- rowSums(meta_state == 2L, na.rm = TRUE) > 0
+
+# last time they are modern
+last_modern <- apply(meta_state == 2L, 1, function(z) {
+  if (any(z, na.rm = TRUE)) max(which(z), na.rm = TRUE) else NA_integer_
+})
+
+# event time = first period AFTER the last modern use (t_last + 1), if in range
+event_time <- ifelse(!is.na(last_modern) & last_modern < Tt, last_modern + 1L, NA_integer_)
+
+# event type at that time: 0 = cessation (to 0), 1 = substitution (to 1), NA otherwise
+pick_event_type <- function(i) {
+  t <- event_time[i]
+  if (is.na(t)) return(NA_integer_)
+  st <- meta_state[i, t]
+  if (is.na(st)) return(NA_integer_)
+  if (st == 0L) return(0L)         # cessation
+  if (st == 1L) return(1L)         # substitution
+  return(NA_integer_)              # stayed modern or missing
+}
+event_type <- vapply(seq_len(nrow(meta_state)), pick_event_type, 0L + NA_integer_)
+
+# ---- 2) Restrict to ever-modern individuals ----
+idx_keep <- which(ever_modern)
+evt_type_em <- event_type[idx_keep]
+evt_time_em <- event_time[idx_keep]
+
+# ---- 3) Console summaries (ever-modern only) ----
+tab_evt <- table(factor(evt_type_em, levels = c(0,1), labels = c("Cessation","Substitution")), useNA = "ifany")
+cat("\n== Ever-modern only ==\n")
+print(tab_evt)
+cat("\n(%)\n")
+print(round(100*prop.table(tab_evt), 1))
+
+counts_by_t <- function(tt, typ) sum(evt_time_em == tt & evt_type_em == typ, na.rm = TRUE)
+bins <- 2:Tt
+by_t <- data.frame(
+  t = bins,
+  cessation    = sapply(bins, counts_by_t, typ = 0L),
+  substitution = sapply(bins, counts_by_t, typ = 1L)
+)
+
+pdf("disadopt_events_by_time.pdf", width = 6, height = 4)
+par(mar = c(4,4,2,1))
+barplot(t(as.matrix(by_t[, c("cessation","substitution")])),
+        beside = FALSE, col = c("gray70","gray30"),
+        names.arg = by_t$t,
+        xlab = "Period (t)", ylab = "Number of events",
+        main = "Stable disadoption events by time (ever-modern)")
+legend("topright", fill = c("gray70","gray30"),
+       legend = c("Cessation","Substitution"), bty = "n")
+dev.off()
